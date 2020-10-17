@@ -72,48 +72,65 @@ sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-
 ```
 sudo chmod +x /usr/local/bin/docker-compose
 ```
-### 创建Conterto的`docker-compose.yml`文件
-1. 首先创建一个工作目录`mycat`，并进入该目录。
-```
-$ cd /usr/
-$ sudo mkdir mycat && cd mycat
-```
-2. 在`mycat`目录中创建Concerto的`docker-compose.yml`文件。
-```
-$ sudo vim docker-compose.yml
-```
-3. 如下内容保存在`docker-compose.yml`文件中：
-```
-version: '2'
-services:
-  database:
-    image: mysql:5.7
-    container_name: database
-    restart: on-failure
-    environment:
-      - MYSQL_DATABASE=concerto
-      - MYSQL_USER=concerto
-      - MYSQL_PASSWORD=622213
-      - MYSQL_ROOT_PASSWORD=622213
-      - TZ=Europe/London
-    volumes:
-      - ./data/mysql:/var/lib/mysql
+### 利用docker-compose创建Conterto
 
-  concerto:
-    image: campsych/concerto-platform:5.0.beta.12
-    container_name: concerto
-    restart: on-failure
-    volumes:
-      - ./data/concerto:/data
-    environment:
-      - CONCERTO_PASSWORD=admin
-      - DB_HOST=database
-      - DB_PASSWORD=622213
-      - TZ=Europe/London
-    ports:
-      - "80:80"
+1. 首先登录[concerto-platform](https://github.com/campsych/concerto-platform/tree/c7424b4a4d0d17b3a4a447f18b0afcdcbdc96ef4)
+
+2. 然后下载该文件压缩包。
+
+3. 解压缩包，然后进入文件夹:`usr/concerto/doker-compose`
+
+4. 将该文件夹中的文件`docker-compose.yml`更改为：
 ```
-4. 最后使用使用`docker-compose`命令启动容器
+version: '3.0'
+services:
+    database:
+      image: mysql:5.7
+      container_name: database
+      restart: unless-stopped
+      ports:
+        - "3306:3306"
+      environment:
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_DATABASE=concerto
+        - TZ=Europe/London
+      volumes:
+        - ./database/mysql:/var/lib/mysql
+        - ./database/conf/mysqld.cnf:/etc/mysql/conf.d/mysqld.cnf
+        - ./logs/database:/var/log/mysql
+
+    concerto:
+      build: ./concerto
+      image: yaozeyang90/concerto-platform:5.0.beta.7.4
+      container_name: concerto
+      restart: unless-stopped
+      volumes:
+        - ./concerto/config/parameters.yml:/usr/src/concerto/app/config/parameters.yml
+        - ./concerto/config/parameters_administration.yml:/usr/src/concerto/app/config/parameters_administration.yml
+        - ./concerto/config/parameters_test_runner.yml:/usr/src/concerto/app/config/parameters_test_runner.yml
+        - ./concerto/config/parameters_uio.yml:/usr/src/concerto/app/config/parameters_uio.yml
+        - ./concerto/config/routing_custom.yml:/usr/src/concerto/app/config/routing_custom.yml
+        - ./concerto/config/test_base.html.twig:/usr/src/concerto/app/Resources/views/test_base.html.twig
+        - ./concerto/R:/usr/src/concerto/R
+        - ./concerto/rcache:/usr/src/concerto/src/Concerto/PanelBundle/Resources/public/rcache
+        - ./concerto/files:/usr/src/concerto/src/Concerto/PanelBundle/Resources/public/files
+        - ./concerto/favicon.ico:/usr/src/concerto/web/favicon.ico
+        - ./concerto/php-fpm/php-fpm.conf:/usr/local/etc/php-fpm.conf
+        - ./concerto/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+        - ./concerto/php/php.ini:/usr/local/etc/php/php.ini
+        - ./concerto/nginx/nginx.conf:/etc/nginx/nginx.conf
+        - ./concerto/nginx/sites/concerto.conf:/etc/nginx/sites-available/concerto.conf
+        - ./logs/concerto/nginx:/var/log/nginx
+        - ./logs/concerto/php-fpm:/var/log/php-fpm
+        - ./logs/concerto/app:/usr/src/concerto/var/logs
+        - ./logs/concerto/sessions:/usr/src/concerto/src/Concerto/TestBundle/Resources/sessions
+      ports:
+        - "80:80"
+```
+
+5. 进入文件夹：`usr/concerto/doker-compose`
+
+6. 最后使用使用`docker-compose`命令启动容器
 ```
 sudo docker-compose up -d
 ```
